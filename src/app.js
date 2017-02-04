@@ -30,6 +30,7 @@ function processEvent(event) {
 
         console.log("Text", text);
 
+<<<<<<< HEAD
         let apiaiRequest = apiAiService.textRequest(text,
             {
                 sessionId: sessionIds.get(sender),
@@ -79,12 +80,56 @@ function processEvent(event) {
                         sendFBMessage(sender, {text: textPart}, callback);
                     });
                 }
+=======
+        userInfoRequest(sender)
+            .then((userInfo)=> {
+                let apiaiRequest = apiAiService.textRequest(text,
+                    {
+                        sessionId: sessionIds.get(sender),
+                        contexts: [
+                            {
+                                name: "generic",
+                                parameters: {
+                                    facebook_user_name: userInfo.first_name
+                                }
+                            }
+                        ]
+                    });
 
-            }
-        });
+                apiaiRequest.on('response', (response) => {
+                    if (isDefined(response.result)) {
+                        let responseText = response.result.fulfillment.speech;
+                        let responseData = response.result.fulfillment.data;
+                        let action = response.result.action;
 
-        apiaiRequest.on('error', (error) => console.error(error));
-        apiaiRequest.end();
+                        if (isDefined(responseData) && isDefined(responseData.facebook)) {
+                            try {
+                                console.log('Response as formatted message');
+                                sendFBMessage(sender, responseData.facebook);
+                            } catch (err) {
+                                sendFBMessage(sender, {text: err.message});
+                            }
+                        } else if (isDefined(responseText)) {
+                            console.log('Response as text message');
+                            // facebook API limit for text length is 320,
+                            // so we split message if needed
+                            var splittedText = splitResponse(responseText);
+
+                            async.eachSeries(splittedText, (textPart, callback) => {
+                                sendFBMessage(sender, {text: textPart}, callback);
+                            });
+                        }
+
+                    }
+                });
+>>>>>>> user_info_sample
+
+                apiaiRequest.on('error', (error) => console.error(error));
+                apiaiRequest.end();
+
+            }).catch(err=> {
+                console.error(err);
+            });
     }
 }
 
@@ -183,6 +228,26 @@ function doSubscribeRequest() {
         });
 }
 
+function userInfoRequest(userId) {
+    return new Promise((resolve, reject) => {
+        request({
+                method: 'GET',
+                uri: "https://graph.facebook.com/v2.6/" + userId + "?fields=first_name,last_name,profile_pic,locale,timezone,gender&access_token=" + FB_PAGE_ACCESS_TOKEN
+            },
+            function (error, response) {
+                if (error) {
+                    console.error('Error while userInfoRequest: ', error);
+                    reject(error);
+                } else {
+                    console.log('userInfoRequest result: ', response.body);
+                    resolve(response.body);
+                }
+            });
+    });
+
+
+}
+
 function isDefined(obj) {
     if (typeof obj == 'undefined') {
         return false;
@@ -203,7 +268,11 @@ app.get('/webhook/', (req, res) => {
     if (req.query['hub.verify_token'] == FB_VERIFY_TOKEN) {
         res.send(req.query['hub.challenge']);
 
+<<<<<<< HEAD
         setTimeout(() => {
+=======
+        setTimeout(function () {
+>>>>>>> user_info_sample
             doSubscribeRequest();
         }, 3000);
     } else {
