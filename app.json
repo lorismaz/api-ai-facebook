@@ -21,6 +21,11 @@
       "description": "Agent language",
       "value": "",
       "required": false
+    },
+    "DASHBOT_API_KEY": {
+      "description": "Dashbot API Key",
+      "value": "",
+      "required": false
     }
   },
   "engines": {
