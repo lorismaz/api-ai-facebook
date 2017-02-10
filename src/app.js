@@ -14,6 +14,8 @@ const APIAI_LANG = process.env.APIAI_LANG || 'en';
 const FB_VERIFY_TOKEN = process.env.FB_VERIFY_TOKEN;
 const FB_PAGE_ACCESS_TOKEN = process.env.FB_PAGE_ACCESS_TOKEN;
 
+var dashbot = require('dashbot')(process.env.DASHBOT_API_KEY).facebook;
+
 const apiAiService = apiai(APIAI_ACCESS_TOKEN, {language: APIAI_LANG, requestSource: "fb"});
 const sessionIds = new Map();
 
@@ -125,7 +127,8 @@ function chunkString(s, len) {
 }
 
 function sendFBMessage(sender, messageData, callback) {
-    request({
+
+    const requestData = {
         url: 'https://graph.facebook.com/v2.6/me/messages',
         qs: {access_token: FB_PAGE_ACCESS_TOKEN},
         method: 'POST',
@@ -133,7 +136,11 @@ function sendFBMessage(sender, messageData, callback) {
             recipient: {id: sender},
             message: messageData
         }
-    }, (error, response, body) => {
+    };
+
+    request(requestData, (error, response, body) => {
+        dashbot.logOutgoing(requestData, response.body);
+        
         if (error) {
             console.log('Error sending message: ', error);
         } else if (response.body.error) {
@@ -214,6 +221,8 @@ app.get('/webhook/', (req, res) => {
 app.post('/webhook/', (req, res) => {
     try {
         var data = JSONbig.parse(req.body);
+
+        dashbot.logIncoming(req.body);
 
         if (data.entry) {
             let entries = data.entry;
